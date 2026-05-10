@@ -2,14 +2,15 @@
   "name": "SHRED · 121 Day Plan",
   "short_name": "SHRED",
   "description": "Your 121-day calisthenics and fat loss tracker",
-  "start_url": "/",
+  "start_url": "/shred-app/",
+  "scope": "/shred-app/",
   "display": "standalone",
   "background_color": "#0a0a0b",
   "theme_color": "#00e676",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "icon.svg",
+      "src": "/shred-app/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"

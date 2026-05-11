@@ -1,19 +1,31 @@
 {
-  "name": "SHRED · 121 Day Plan",
+  "name": "SHRED · Your Personal Plan",
   "short_name": "SHRED",
-  "description": "Your 121-day calisthenics and fat loss tracker",
+  "description": "Personal calisthenics and running tracker",
   "start_url": "/shred-app/",
   "scope": "/shred-app/",
   "display": "standalone",
   "background_color": "#0a0a0b",
   "theme_color": "#00e676",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/shred-app/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "/shred-app/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/shred-app/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/shred-app/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

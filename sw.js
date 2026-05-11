@@ -1,4 +1,4 @@
-const CACHE = 'shred-v3';
+const CACHE = 'shred-v2';
 const ASSETS = [
   '/shred-app/',
   '/shred-app/index.html',

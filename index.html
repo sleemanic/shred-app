@@ -530,6 +530,34 @@ function defaultUser(name){
   };
 }
 
+function daysLeftForUser(u){
+  if(!u)return 0;
+  const now=new Date();now.setHours(0,0,0,0);
+  if(u.profile&&u.profile.holidayDate){
+    return Math.max(0,Math.round((new Date(u.profile.holidayDate)-now)/86400000));
+  }
+  const start=new Date(u.startDate||now.toISOString().slice(0,10));
+  const elapsed=Math.max(0,Math.floor((now-start)/86400000));
+  return Math.max(0,(u.profile?.duration||121)-elapsed);
+}
+function deleteUser(id){
+  const u=USERS[id];if(!u)return;
+  const name=u.profile.name||'this user';
+  if(!confirm('Delete ALL data for '+name+'? This cannot be undone.'))return;
+  localStorage.removeItem(getUserKey(id));
+  delete USERS[id];
+  const remaining=Object.keys(USERS);
+  if(remaining.length>0){
+    if(activeUserId===id)activeUserId=remaining[0];
+    saveAll();
+    renderHome();
+    renderUserBar();
+    showNotif('🗑️',name+' deleted');
+  } else {
+    localStorage.clear();
+    location.reload();
+  }
+}
 function saveAll(){
   try{
     Object.entries(USERS).forEach(([id,u])=>localStorage.setItem(getUserKey(id),JSON.stringify(u)));
@@ -540,7 +568,28 @@ function saveAll(){
 function loadAll(){
   try{
     const ids=JSON.parse(localStorage.getItem('shred_userIds')||'[]');
-    ids.forEach(id=>{const d=localStorage.getItem(getUserKey(id));if(d)USERS[id]=JSON.parse(d);});
+    ids.forEach(id=>{
+      const d=localStorage.getItem(getUserKey(id));
+      if(d){
+        const u=JSON.parse(d);
+        // Sanitise: ensure startDate is valid
+        if(!u.startDate||isNaN(new Date(u.startDate).getTime())){
+          u.startDate=new Date().toISOString().slice(0,10);
+        }
+        // Sanitise: ensure runs array exists
+        if(!u.runs)u.runs=[];
+        if(!u.bodyLogs)u.bodyLogs=[];
+        if(!u.earnedBadges)u.earnedBadges=[];
+        // Sanitise: recalc duration from holidayDate if set
+        if(u.profile&&u.profile.holidayDate){
+          const now=new Date();now.setHours(0,0,0,0);
+          const hol=new Date(u.profile.holidayDate);
+          const days=Math.round((hol-new Date(u.startDate))/86400000);
+          if(days>0)u.profile.duration=days;
+        }
+        USERS[id]=u;
+      }
+    });
     activeUserId=localStorage.getItem('shred_activeUser')||ids[0]||null;
   }catch(e){}
 }
@@ -557,7 +606,7 @@ function renderUserBar(){
   const list=document.getElementById('userList');
   if(!bar)return;
   bar.innerHTML=Object.values(USERS).map(u=>`<button class="uc ${u.id===activeUserId?'active':''}" onclick="switchUser('${u.id}')">${u.profile.name||'User'}</button>`).join('')+`<button class="uc add" onclick="addNewUser()">+ Add</button>`;
-  if(list)list.innerHTML=Object.values(USERS).map(u=>`<div class="row"><div><div style="font-size:14px;font-weight:500">${u.profile.name}</div><div style="font-size:12px;color:var(--t2)">${GC[u.profile.goal]?.label||''} · ${Object.keys(u.completedDays).length} sessions · ${(u.runs||[]).length} runs</div></div>${u.id!==activeUserId?`<button class="btn-s" style="font-size:12px;padding:6px 12px" onclick="switchUser('${u.id}')">Switch</button>`:'<span style="font-size:11px;color:var(--g);font-weight:600">Active</span>'}</div>`).join('');
+  if(list)list.innerHTML=Object.values(USERS).map(u=>`<div class="row"><div style="flex:1"><div style="font-size:14px;font-weight:500">${u.profile.name}</div><div style="font-size:12px;color:var(--t2)">${GC[u.profile.goal]?.label||''} · ${Object.keys(u.completedDays).length} sessions · ${(u.runs||[]).length} runs${u.profile.holidayDate?' · '+daysLeftForUser(u)+'d left':''}</div></div><div style="display:flex;gap:8px;align-items:center">${u.id!==activeUserId?`<button class="btn-s" style="font-size:12px;padding:6px 12px" onclick="switchUser('${u.id}')">Switch</button>`:'<span style="font-size:11px;color:var(--g);font-weight:600">Active</span>'}<button style="background:var(--rd);border:0.5px solid var(--r);color:var(--r);border-radius:99px;padding:4px 10px;font-size:11px;cursor:pointer;font-family:'DM Sans',sans-serif" onclick="deleteUser('${u.id}')">Delete</button></div></div>`).join('');
 }
 
 // ===== ONBOARDING =====
@@ -707,8 +756,18 @@ function totalDays(){const u=currentUser();return Math.max(7,u?u.profile.duratio
 function pct(){return Math.min(100,Math.round(dayIndex()/totalDays()*100));}
 function daysLeft(){
   const u=currentUser();if(!u)return 0;
-  if(u.profile.holidayDate){const now=new Date();now.setHours(0,0,0,0);return Math.max(0,Math.round((new Date(u.profile.holidayDate)-now)/86400000));}
-  return Math.max(0,totalDays()-dayIndex());
+  const now=new Date();now.setHours(0,0,0,0);
+  if(u.profile.holidayDate){
+    const hol=new Date(u.profile.holidayDate);
+    const days=Math.round((hol-now)/86400000);
+    // If holiday is in the past, show 0
+    return Math.max(0,days);
+  }
+  // No holiday date — use duration from startDate
+  const start=new Date(u.startDate||now.toISOString().slice(0,10));
+  const elapsed=Math.max(0,Math.floor((now-start)/86400000));
+  const total=Math.max(7,u.profile.duration||121);
+  return Math.max(0,total-elapsed);
 }
 function greeting(){const h=new Date().getHours();return h<12?'Good morning':h<17?'Good afternoon':'Good evening';}
 function calcStreak(){
@@ -947,6 +1006,8 @@ function completeWorkout(){
   const msgs=['Every session brings you closer. Keep going.','Done. Most people are still on the couch.','Consistency beats perfection. You proved it.','Progress is being made. Trust the process.'];
   document.getElementById('doneMsg').textContent=msgs[Math.floor(Math.random()*msgs.length)];
   document.getElementById('doneBadgeEl').innerHTML=newBadges.length?`<div style="background:var(--ad);border:0.5px solid var(--a);border-radius:var(--rad);padding:12px 14px;width:100%"><div style="font-size:11px;color:var(--a);font-weight:600;text-transform:uppercase;margin-bottom:6px">🏆 Achievement unlocked!</div>${newBadges.map(b=>`<div style="font-size:14px">${b.icon} ${b.label}</div>`).join('')}</div>`:'';
+  // Save perceived effort rating
+  document.getElementById('effortRating').value='3';
   // Show run log option if today has a run
   const tp=getWeekPlan(currentWeek()).find(d=>d.day===todayDow());
   const hasRun=!!tp?.run&&!(u.runs||[]).some(r=>r.date===today());
@@ -1105,7 +1166,28 @@ function exportCSV(){
   [...dates].sort().forEach(d=>{const log=(u.bodyLogs||[]).find(l=>l.date===d);const done=u.completedDays[d];const run=(u.runs||[]).find(r=>r.date===d);rows.push([d,log?.weight||'',log?.waist||'',done?.workoutName||'',done?.duration||'',done?.setsTotal||'',run?.distanceKm||'',run?.timeStr||'',run?.paceStr||'',run?.notes||'']);});
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'}));a.download='shred-'+(u.profile.name||'user')+'.csv';a.click();
 }
-function resetCurrentUser(){if(!confirm('Reset all data for '+currentUser()?.profile.name+'?'))return;const u=currentUser();const id=u.id;USERS[id]=defaultUser(u.profile.name);USERS[id].id=id;saveAll();location.reload();}
+function resetCurrentUser(){
+  const u=currentUser();if(!u)return;
+  const name=u.profile.name||'this user';
+  const choice=confirm('Delete ALL data for '+name+'? This cannot be undone.');
+  if(!choice)return;
+  const id=u.id;
+  // Remove from localStorage
+  localStorage.removeItem(getUserKey(id));
+  delete USERS[id];
+  const remaining=Object.keys(USERS);
+  if(remaining.length>0){
+    activeUserId=remaining[0];
+    saveAll();
+    renderHome();
+    renderUserBar();
+    showNotif('🗑️',name+'\'s data deleted');
+  } else {
+    // No users left — full reset
+    localStorage.clear();
+    location.reload();
+  }
+}
 
 // ===== NOTIF =====
 let nTimeout=null;

@@ -1,13 +1,24 @@
 {
   "name": "SHRED · Your Personal Plan",
   "short_name": "SHRED",
-  "description": "Personal calisthenics and running tracker",
+  "description": "Personal calisthenics and running tracker — build visible abs, lose weight and get fitter with a plan tailored to your level.",
   "start_url": "/shred-app/",
   "scope": "/shred-app/",
   "display": "standalone",
   "background_color": "#0a0a0b",
   "theme_color": "#00e676",
   "orientation": "portrait-primary",
+  "prefer_related_applications": false,
+  "categories": ["health", "fitness", "sports"],
+  "screenshots": [
+    {
+      "src": "/shred-app/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "SHRED home screen"
+    }
+  ],
   "icons": [
     {
       "src": "/shred-app/icon-192.png",

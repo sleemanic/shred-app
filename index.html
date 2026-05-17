@@ -446,6 +446,7 @@ select{background:var(--s3);border:0.5px solid var(--b2);border-radius:var(--rad
     <div class="card">
       <div class="ct">Data</div>
       <div class="srow" style="cursor:pointer" onclick="exportCSV()"><div><div style="font-size:14px">Export data (CSV)</div><div style="font-size:12px;color:var(--t2)">Workout & run history for current user</div></div><span style="color:var(--t2)">→</span></div>
+      <button id="installAppBtn" onclick="triggerInstall()" style="display:none;align-items:center;justify-content:space-between;width:100%;padding:14px 0;background:none;border:none;border-bottom:0.5px solid var(--b1);cursor:pointer;font-family:DM Sans,sans-serif"><div><div style="font-size:14px;color:var(--g);font-weight:600;text-align:left">📲 Install SHRED as app</div><div style="font-size:12px;color:var(--t2);text-align:left">Tap to add to home screen</div></div><span style="color:var(--g)">→</span></button>
       <div class="srow" style="cursor:pointer" onclick="resetCurrentUser()"><div style="font-size:14px;color:var(--r)">Reset current user data</div><span style="color:var(--t2)">→</span></div>
     </div>
     <div style="padding:20px 16px;font-size:12px;color:var(--t3);text-align:center;line-height:1.8">SHRED · Personal Fitness Plan<br>All data stored privately on your device</div>
@@ -1137,6 +1138,36 @@ if(Object.keys(USERS).length===0){
   planWeekShowing=currentWeek();renderHome();renderUserBar();
 }
 if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/shred-app/sw.js',{scope:'/shred-app/'}).catch(()=>{});});}
+
+// PWA install prompt handler
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  // Show install button in settings
+  const btn = document.getElementById('installAppBtn');
+  if (btn) btn.style.display = 'flex';
+  // Also show a banner after 3 seconds if not yet installed
+  setTimeout(() => {
+    if (deferredInstallPrompt) showNotif('📲', 'Tap Settings → Install App to add SHRED to your home screen');
+  }, 3000);
+});
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  const btn = document.getElementById('installAppBtn');
+  if (btn) btn.style.display = 'none';
+  showNotif('✅', 'SHRED installed! Open it from your home screen.');
+});
+async function triggerInstall() {
+  if (!deferredInstallPrompt) {
+    showNotif('ℹ️', 'Open this page in Chrome on Android to install');
+    return;
+  }
+  deferredInstallPrompt.prompt();
+  const { outcome } = await deferredInstallPrompt.userChoice;
+  if (outcome === 'accepted') { showNotif('🔥', 'Installing SHRED...'); }
+  deferredInstallPrompt = null;
+}
 </script>
 </body>
 </html>
